@@ -1,0 +1,7 @@
+.git
+.claude
+.env
+*.md
+*.nix
+flake.lock
+fly.toml

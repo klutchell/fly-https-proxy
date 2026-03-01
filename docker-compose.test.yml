@@ -1,0 +1,35 @@
+services:
+  proxy:
+    build: .
+    environment:
+      PROXY_USER: testuser
+      PROXY_PASS: testpass
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "8888"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+
+  sut:
+    image: curlimages/curl:latest
+    depends_on:
+      proxy:
+        condition: service_healthy
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        set -eu
+
+        echo "==> Test 1: CONNECT with valid auth"
+        curl -sf --proxy http://testuser:testpass@proxy:8888 https://httpbin.org/ip
+        echo ""
+
+        echo "==> Test 2: Reject without auth"
+        if curl -sf --proxy http://proxy:8888 https://httpbin.org/ip >/dev/null 2>&1; then
+          echo "FAIL: unauthenticated request should have been rejected"
+          exit 1
+        fi
+        echo "OK: unauthenticated request rejected"
+
+        echo "==> All tests passed"
